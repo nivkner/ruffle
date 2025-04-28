@@ -2179,7 +2179,9 @@ impl<'gc> MovieClip<'gc> {
         callable: Option<Avm2Object<'gc>>,
         context: &mut UpdateContext<'gc>,
     ) {
-        let frame_scripts = &mut self.0.write(context.gc()).frame_scripts;
+        let current_frame = self.current_frame();
+        let mut write = self.0.write(context.gc());
+        let frame_scripts = &mut write.frame_scripts;
 
         let index = frame_id as usize;
         if let Some(callable) = callable {
@@ -2189,6 +2191,9 @@ impl<'gc> MovieClip<'gc> {
             frame_scripts[index] = Some(callable);
         } else if frame_scripts.len() > index {
             frame_scripts[index] = None;
+        }
+        if frame_id == current_frame {
+            write.last_queued_script_frame = None;
         }
     }
 
@@ -2642,7 +2647,6 @@ impl<'gc> TDisplayObject<'gc> for MovieClip<'gc> {
                             write.frame_scripts.get(frame_id as usize).cloned()
                         {
                             write.last_queued_script_frame = Some(frame_id);
-                            write.queued_script_frame = None;
                             write.set_flag(MovieClipFlags::EXECUTING_AVM2_FRAME_SCRIPT, true);
 
                             drop(write);
